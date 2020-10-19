@@ -15,7 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import GridSearchCV
 
-BASE = os.path.dirname(os.getcwd())
+BASE = os.path.dirname(os.path.realpath(__file__))
 logger = logging.getLogger()
 
 if __name__ == '__main__':
@@ -86,8 +86,8 @@ if __name__ == '__main__':
             clf.fit(X, y)
 
     else:
-        clf = joblib.load(os.path.join(BASE, 'trained.clf'))
-        scaler = joblib.load(os.path.join(BASE, 'trained.scaler'))
+        clf = joblib.load(os.path.join(BASE, 'models', 'trained.clf'))
+        scaler = joblib.load(os.path.join(BASE, 'models', 'trained.scaler'))
 
     if not os.path.exists(args.outdir):
         os.mkdir(args.outdir)
