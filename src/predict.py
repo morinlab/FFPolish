@@ -19,7 +19,7 @@ BASE = os.path.dirname(os.getcwd())
 logger = logging.getLogger()
 
 if __name__ == '__main__':
-    parser = ap.ArgumentParser(description='FFPE-\n' +
+    parser = ap.ArgumentParser(description='FFPolish-predict\n' +
                                            'Copyright (C) 2020 Matthew Nguyen',
                                formatter_class=ap.RawTextHelpFormatter)
 
