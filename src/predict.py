@@ -32,9 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--outdir', metavar='DIR', default=os.path.join(os.getcwd(), 'results'), 
                         help='Output directory')
     parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
-    # parser.add_argument('-rt', '--retrain', metavar='HDF5', default=None, 
-    #                     help='Retrain model with new data (in hdf5 format)')
-    parser.add_argument('-rt', '--retrain', action='store_true', 
+    parser.add_argument('-rt', '--retrain', metavar='HDF5', default=None, 
                         help='Retrain model with new data (in hdf5 format)')
     parser.add_argument('-gs', '--grid_search', action='store_true', default=False,
                         help='Perform grid search when retraining model')
@@ -55,18 +53,17 @@ if __name__ == '__main__':
     if args.retrain:
         orig_train_df = vaex.open(os.path.join(BASE, 'orig_train.hdf5'))
         train_features = orig_train_df.get_column_names(regex='tumor')
-        # new_train_df = args.retrain
+        new_train_df = vaex.open(args.retrain)
 
         orig_train_df = orig_train_df.to_pandas_df(train_features + ['real'])
-        # new_train_df = new_train_df.to_pandas_df(train_features + ['real'])
+        new_train_df = new_train_df.to_pandas_df(train_features + ['real'])
 
         clf = LogisticRegression(penalty='l2', random_state=args.seed, solver='saga', max_iter=10000, 
                                  class_weight='balanced', C=0.001)
         scaler = MinMaxScaler()
 
         logger.info('Concatenate old and new training feature matrices')
-        train_df = orig_train_df
-        # train_df = pd.concat([orig_train_df, new_train_df], ignore_index=True)
+        train_df = pd.concat([orig_train_df, new_train_df], ignore_index=True)
         X = train_df[train_features]
         y = train_df['real']
 
