@@ -16,12 +16,12 @@ from sklearn.model_selection import GridSearchCV
 
 BASE = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-def predict(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, loglevel):
-    logger = logging.getLogger()
+def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, loglevel):
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s (%(relativeCreated)d ms) -> %(levelname)s: %(message)s',
                         datefmt='%I:%M:%S %p')
 
+    logger = logging.getLogger()
     logger.info('Running FFPolish prediction')
 
     if not prefix:
