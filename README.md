@@ -1,4 +1,5 @@
-# FFPolish - Filters Artifacts From Formalin-Fixed Paraffin-Embedded (FFPE) Variants
+# FFPolish 
+Filters Artifacts From Formalin-Fixed Paraffin-Embedded (FFPE) Variants
 
 ## Installation 
 ### Conda Installation
