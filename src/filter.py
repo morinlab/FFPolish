@@ -93,8 +93,8 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, log
     logger.info('Filtering VCF')
     kept_vars = set(df.index.str.replace(prefix + '~', ''))
 
-    vcf_file_path = os.path.join(outdir, prefix + '_filtered.vcf.gz')
-    with gzip.open(vcf_file_path, 'wt') as f_out:
+    vcf_file_path = os.path.join(outdir, prefix + '_filtered.vcf')
+    with open(vcf_file_path, 'w') as f_out:
         with gzip.open(vcf, 'rt') as f_in:
             for line in f_in:
                 if not line.startswith('#'):
