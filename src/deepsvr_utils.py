@@ -455,7 +455,7 @@ class PrepareData:
                                     '.readcounts'.format(out_dir_path,
                                                             self.sample)
         if not skip_readcount:
-            os.system('/home/mnguyen/bam-readcount/bin/bam-readcount -i -w 0 -l {0} -f {1} '
+            os.system('bam-readcount -i -w 0 -l {0} -f {1} '
                         '{2} > {3}'.format(sites_file_path, self.ref_file,
                                            self.bam,
                                            tumor_readcount_file_path))
