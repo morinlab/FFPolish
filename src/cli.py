@@ -31,7 +31,7 @@ if __name__ == '__main__':
     predict_parser.add_argument('-gs', '--grid_search', action='store_true', default=False,
                         help='Perform grid search when retraining model')
     predict_parser.add_argument('-c', '--cores', metavar='INT', default=1, 
-                        help='Number of cores to use for grid search (default: 1)')
+                        help='Number of cores to use for grid search and filtering (default: 1)')
     predict_parser.add_argument('-s', '--seed', metavar='INT', default=667, 
                         help='Seed for retraining (default: 667)')
 
