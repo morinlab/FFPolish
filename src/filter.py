@@ -40,6 +40,69 @@ def get_deepsvr_attr(prefix, bam, bed_file_path, ref, tmpdir):
     return prep_data.training_data
 
 
+def vcf_to_bed(vcf_path:str, bed_path:str):
+    """
+    Quickly coverts a VCF file (1-based) to a simple BED file with alleles included
+    The following columns are output:
+    - chromosome
+    - start
+    - end
+    - ref
+    - alt
+    :param vcf_path: A string containing a filepath to the input VCF file. May be gzipped
+    :param bed_path: A string specifying a filepath to the output BED file
+    :return: None
+    """
+
+    # Check to see if the input VCF is gzipped
+    with open(vcf_path, "rb") as test_f:
+        if test_f.read(2) == b'\x1f\x8b':
+            is_gzipped = True
+        else:
+            is_gzipped = False
+
+    with (gzip.open(vcf_path, "rt") if is_gzipped else open(vcf_path, "r")) as f, open(bed_path, "w") as o:
+
+        i = 0
+        for line in f:
+            i += 1
+            if line.startswith("#"):  # Skip comment and header lines
+                continue
+
+            line = line.rstrip("\n").rstrip("\r")
+            cols = line.split("\t")
+
+            # Parse out the columns we care about
+            try:
+                chrom = cols[0]
+                pos = cols[1]
+                ref = cols[3]
+                alt = cols[4]
+            except IndexError as e:
+                raise AttributeError("Unable to parse line %s of the input VCF file \'%s\' due to missing columns " % (i, vcf_path)) from e
+
+            # Prepare start and end coodinates
+            try:
+                pos = int(pos)
+                end = pos
+                start = end - 1
+                # Is this a deletion? If so, we need to extend the end coordinate
+                if len(ref) > 1:
+                    end += len(ref) - 1
+
+            except TypeError as e:
+                raise AttributeError("While processing line %s of the input VCF file, the position \'%s\' could not be converted" % (i, pos)) from e
+
+            # Sanity check
+            if start < 0:
+                raise AttributeError("Unable to process line %s of the input VCF file: Position is zero or negative" % i)
+
+            # Write out BED entry
+            outline = [chrom, str(start), str(end), ref, alt]
+            o.write("\t".join(outline))
+            o.write(os.linesep)
+
+
 def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, loglevel):
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s (%(relativeCreated)d ms) -> %(levelname)s: %(message)s',
@@ -100,10 +163,7 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, log
 
     logger.info('Converting VCF to bed file')
     bed_file_path = os.path.join(tmpdir, prefix) + '.bed'
-    returncode = os.system('zcat {} | grep PASS | vcf2bed | cut -f 1-3,6-7 > {}'.format(vcf, bed_file_path))
-
-    if returncode != 0:
-        raise subprocess.CalledProcessError('Command \'zcat {} | grep PASS | vcf2bed | cut -f 1-3,6-7 > {}\' returned exit code {}'.format(vcf, bed_file_path, returncode))
+    vcf_to_bed(vcf, bed_file_path)
 
     logger.info('Preparing data')
     if cores == 1:
@@ -176,14 +236,21 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, log
     df = df[df.preds == 1]
 
     logger.info('Filtering VCF')
-    if cores == 0:
+    if cores == 1:
         kept_vars = set(df.index.str.replace(prefix + '~', ''))
     else:
         kept_vars = set(df.index.str.replace(prefix + '.j[0-9]*~', ''))
 
+    # Is the input VCF gzipped?
+    with open(vcf, "rb") as test_f:
+        if test_f.read(2) == b'\x1f\x8b':
+            is_gzipped = True
+        else:
+            is_gzipped = False
+
     vcf_file_path = os.path.join(outdir, prefix + '_filtered.vcf')
     with open(vcf_file_path, 'w') as f_out:
-        with gzip.open(vcf, 'rt') as f_in:
+        with (gzip.open(vcf, 'rt') if is_gzipped else open(vcf, "r")) as f_in:
             for line in f_in:
                 if not line.startswith('#'):
                     split = line.split('\t')
