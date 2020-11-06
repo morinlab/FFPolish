@@ -164,7 +164,7 @@ def vcf_to_bed(vcf_path:str, bed_path:str):
     return var_keys
 
 
-def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_threshold:int = 4, snv_repeat_threshold = 5):
+def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_threshold:int = 4):
 
     # Break up this indel key into its individual components
     try:
@@ -227,8 +227,8 @@ def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_thresho
         ref_seq = ref_genome[chrom][start_pos:end_pos].seq
     except IndexError:  # i.e. this indel occurs near the end of the genome. This filter does not apply
         ref_seq = ""
-        repeat_ext = False
 
+    repeat_ext = False
     logging.debug("%s: Obtained reference sequence %s. Comparing to %s" % (var_key, ref_seq, unique_seq))
     if ref_seq != "":
         # Now, check each slice for the repeats
@@ -248,7 +248,7 @@ def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_thresho
         return False
 
 
-def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, loglevel):
+def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_features, seed, loglevel):
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s (%(relativeCreated)d ms) -> %(levelname)s: %(message)s',
                         datefmt='%I:%M:%S %p')
@@ -386,6 +386,11 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, log
         is_repeat = check_for_repeat(var, ref_fasta)
         var_are_repeats.append(is_repeat)
     df["repeat"] = var_are_repeats
+
+    # Write out the variant features (if the user specified)
+    if output_features:
+        feature_file = os.path.join(outdir, prefix + '_features.tsv')
+        df.to_csv(feature_file, sep="\t")
 
     # Filter variants
     df = df[df.preds == 1]

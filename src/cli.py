@@ -25,14 +25,17 @@ if __name__ == '__main__':
     predict_parser.add_argument('bam', metavar='BAM', help='Tumor BAM file')
     predict_parser.add_argument('-o', '--outdir', metavar='DIR', default=os.path.join(os.getcwd(), 'results'), 
                         help='Output directory')
-    predict_parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
-    predict_parser.add_argument('-rt', '--retrain', metavar='HDF5', default=None, 
-                        help='Retrain model with new data (in hdf5 format)')
-    predict_parser.add_argument('-gs', '--grid_search', action='store_true', default=False,
-                        help='Perform grid search when retraining model')
-    predict_parser.add_argument('-c', '--cores', metavar='INT', default=1, 
+    predict_parser.add_argument('-c', '--cores', metavar='INT', default=1,
                         help='Number of cores to use for grid search and filtering (default: 1)')
-    predict_parser.add_argument('-s', '--seed', metavar='INT', default=667, 
+    predict_parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
+    predict_parser.add_argument("-f", "--features", action="store_true", help="Generate an additional log file summarizing filtering characteristics for each variant")
+
+    training_parser = predict_parser.add_argument_group("Model re-training")
+    training_parser.add_argument('-rt', '--retrain', metavar='HDF5', default=None,
+                        help='Retrain model with new data (in hdf5 format)')
+    training_parser.add_argument('-gs', '--grid_search', action='store_true', default=False,
+                        help='Perform grid search when retraining model')
+    training_parser.add_argument('-s', '--seed', metavar='INT', default=667,
                         help='Seed for retraining (default: 667)')
 
     extract_parser = subparsers.add_parser('extract', help='Extract features for re-training')
@@ -52,7 +55,7 @@ if __name__ == '__main__':
 
     if args.subcommand == 'filter':
         filter(args.ref, args.vcf, args.bam, args.outdir, args.prefix, args.retrain, args.grid_search, 
-                args.cores, args.seed, args.loglevel)
+                args.cores, args.features, args.seed, args.loglevel)
 
     else:
         extract(args.ref, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount,
