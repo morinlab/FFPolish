@@ -10,6 +10,7 @@ import gzip
 import pdb
 import vaex
 import re
+import pyfaidx
 import subprocess
 import multiprocessing
 
@@ -83,10 +84,15 @@ def vcf_to_bed(vcf_path:str, bed_path:str):
                 pos = cols[1]
                 ref = cols[3]
                 alt = cols[4]
+                passed_filt = cols[6]
                 # Calculate the variant key based upon the origin VCF (which we will compare against at the end when filtering
                 old_var_key = '{}:{}-{}{}>{}'.format(chrom, pos, pos, ref, alt)
             except IndexError as e:
                 raise AttributeError("Unable to parse line %s of the input VCF file \'%s\' due to missing columns " % (i, vcf_path)) from e
+
+            # Only keep PASS/unflagged variants
+            if passed_filt != "PASS" and passed_filt != ".":
+                continue
 
             try:
                 pos = int(pos)
@@ -156,6 +162,90 @@ def vcf_to_bed(vcf_path:str, bed_path:str):
             var_keys[old_var_key] = new_var_key
 
     return var_keys
+
+
+def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_threshold:int = 4, snv_repeat_threshold = 5):
+
+    # Break up this indel key into its individual components
+    try:
+        chrom, remainder = var_key.split(":")
+        chrom = chrom.split("~")[1]
+        start, end = re.findall("[0-9][0-9]*", remainder)
+        ref, alt = re.sub(".*[0-9]", "", remainder).split(">")
+    except ValueError as e:
+        raise ValueError("Unable to process variant string %s" % var_key) from e
+
+    start_pos = int(start)
+
+    logging.debug("%s: Examining variant for repetitive reference sequence" % str)
+    if alt == "-":  # Deletion
+        indel_seq = ref
+        is_snv = False
+    else:
+        indel_seq = alt
+        if ref == "-":
+            is_snv = False
+        is_snv = True
+
+    # Check to  see if this even is an extension/contraction of an existing repeat
+    # First, lets try to reduce this indel down to a unique core sequence
+    # In a repetitive region, some events may delete multiple instances of the repeat
+    # Ex. For reference AAAACTAAAACTAAAACTAAAACT, an insertion of AAAACTAAAACT may occur
+    unique_seq = indel_seq
+    if len(set(indel_seq)) != 1:  # Don't process homopolymers
+        for i in range(2, int(len(indel_seq) / 2) + 1):
+            substring_match = True
+            test_seq = indel_seq[0:i]
+            start = 0
+            end = 0
+            while True:
+                start = end
+                end = start + i
+                sub_seq = indel_seq[start:end]
+                if sub_seq == "":
+                    break
+                if indel_seq[start:end] != test_seq:
+                    substring_match = False
+                    break
+
+            # Is this string a repetative substring of the full indel sequence?
+            if substring_match:
+                unique_seq = test_seq
+                logging.debug("%s: Reduced indel sequence to %s" % (mutation, unique_seq))
+                break
+
+    seq_length = len(unique_seq)
+    # If this is an SNV, lets get the bases adjacent to this mutation, instead of the current position itself
+    if is_snv:
+        start_pos += 1
+    end_pos = start_pos + seq_length * indel_repeat_threshold
+
+    # Obtain the reference sequence to be examined for repeats
+    try:
+        logging.debug(
+            "%s: Parsing reference genome for sequence %s: %s-%s" % (var_key, chrom, start_pos, end_pos))
+        ref_seq = ref_genome[chrom][start_pos:end_pos].seq
+    except IndexError:  # i.e. this indel occurs near the end of the genome. This filter does not apply
+        ref_seq = ""
+        repeat_ext = False
+
+    logging.debug("%s: Obtained reference sequence %s. Comparing to %s" % (var_key, ref_seq, unique_seq))
+    if ref_seq != "":
+        # Now, check each slice for the repeats
+        repeat_ext = True
+        for j in range(indel_repeat_threshold):
+            c_pos = j * seq_length
+            c_end = c_pos + seq_length
+            if ref_seq[
+               c_pos:c_end] != unique_seq:  # The reference sequence does not match. This indel sequence does not occur the specified number of times
+                repeat_ext = False
+                break
+
+    if repeat_ext:  # This indel is an expansion/contraction of an existing repeat
+        logging.debug("%s: Failed repetitive sequence filter" % var_key)
+        return True
+    else:
+        return False
 
 
 def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, loglevel):
@@ -288,7 +378,18 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, log
     logger.info('Obtaining predictions')
     preds = clf.predict(df_scaled)
     df['preds'] = preds
+
+    # Check for repetitive sequences
+    ref_fasta = pyfaidx.Fasta(ref)
+    var_are_repeats = []
+    for var in list(df.index):
+        is_repeat = check_for_repeat(var, ref_fasta)
+        var_are_repeats.append(is_repeat)
+    df["repeat"] = var_are_repeats
+
+    # Filter variants
     df = df[df.preds == 1]
+    df = df[df.repeat == False]
 
     logger.info('Filtering VCF')
     if cores == 1:
