@@ -4,6 +4,7 @@ import os
 import argparse as ap
 from filter import filter
 from extract import extract
+import plot_features
 
 VERSION = 0.1
 
@@ -28,7 +29,8 @@ if __name__ == '__main__':
     predict_parser.add_argument('-c', '--cores', metavar='INT', default=1,
                         help='Number of cores to use for grid search and filtering (default: 1)')
     predict_parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
-    predict_parser.add_argument("-f", "--features", action="store_true", help="Generate an additional log file summarizing filtering characteristics for each variant")
+    predict_parser.add_argument("-f", "--features", action="store_true", help="Generate an additional TSV file summarizing characteristics for each variant")
+    predict_parser.add_argument("--plot_features", action="store_true", help="Generate figures summarizing variant characteristics")
 
     training_parser = predict_parser.add_argument_group("Model re-training")
     training_parser.add_argument('-rt', '--retrain', metavar='HDF5', default=None,
@@ -51,12 +53,22 @@ if __name__ == '__main__':
     extract_parser.add_argument('--pkl', metavar='PKL', default=None, 
                         help='Pickle file of true variants')
 
+    plot_parser = subparsers.add_parser("plot", help="Visualize DeepSVR features")
+    plot_parser.add_argument("input", metavar="TSV", help="Input TSV file listing DeepSVR features. Generated using \'filter -f \'")
+    plot_parser.add_argument('outdir', metavar='DIR', help='Output directory')
+
     args = parser.parse_args()
 
     if args.subcommand == 'filter':
         filter(args.ref, args.vcf, args.bam, args.outdir, args.prefix, args.retrain, args.grid_search, 
-                args.cores, args.features, args.seed, args.loglevel)
+                args.cores, args.features, args.plot_features, args.seed, args.loglevel)
 
-    else:
+    elif args.subcommand == 'extract':
         extract(args.ref, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount,
                 args.labels, args.pkl)
+
+    elif args.subcommand == 'plot':
+        plot_features.main(args)
+
+    else:
+        raise parser.error("Unrecognized command: %s" % args.subcommand)

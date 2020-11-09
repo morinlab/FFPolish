@@ -13,6 +13,7 @@ import re
 import pyfaidx
 import subprocess
 import multiprocessing
+import plot_features
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MinMaxScaler
@@ -248,7 +249,7 @@ def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_thresho
         return False
 
 
-def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_features, seed, loglevel):
+def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_features, generate_plots, seed, loglevel):
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s (%(relativeCreated)d ms) -> %(levelname)s: %(message)s',
                         datefmt='%I:%M:%S %p')
@@ -389,8 +390,17 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
 
     # Write out the variant features (if the user specified)
     if output_features:
+        logger.info('Saving DeepSVR features')
         feature_file = os.path.join(outdir, prefix + '_features.tsv')
         df.to_csv(feature_file, sep="\t")
+    # Generate figures (if specified)
+    if generate_plots:
+        logger.info('Generating Figures')
+        figure_dir = os.path.join(outdir, "figures")
+        if not os.path.exists(figure_dir):
+            os.mkdir(figure_dir)
+        plot_features.generate_plots(df, figure_dir, prefix)
+        plot_features.generate_pca_plot(df, figure_dir, prefix)
 
     # Filter variants
     df = df[df.preds == 1]
