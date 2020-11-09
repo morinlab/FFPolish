@@ -26,7 +26,7 @@ if __name__ == '__main__':
     predict_parser.add_argument('bam', metavar='BAM', help='Tumor BAM file')
     predict_parser.add_argument('-o', '--outdir', metavar='DIR', default=os.path.join(os.getcwd(), 'results'), 
                         help='Output directory')
-    predict_parser.add_argument('-c', '--cores', metavar='INT', default=1,
+    predict_parser.add_argument('-c', '--cores', metavar='INT', default=1, type=int,
                         help='Number of cores to use for grid search and filtering (default: 1)')
     predict_parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
     predict_parser.add_argument("-f", "--features", action="store_true", help="Generate an additional TSV file summarizing characteristics for each variant")

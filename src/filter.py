@@ -307,12 +307,12 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
     if not os.path.exists(tmpdir):
         os.mkdir(tmpdir)
 
-    logger.info('Converting VCF to bed file')
+    logger.info('Converting VCF to BED file')
     bed_file_path = os.path.join(tmpdir, prefix) + '.bed'
     var_keys = vcf_to_bed(vcf, bed_file_path)
 
     logger.info('Preparing data')
-    if cores == 1:
+    if cores <= 1:
         # Single-threaded
         logging.info("Running in single-threaded mode")
         df = get_deepsvr_attr(prefix, bam, bed_file_path, ref, tmpdir)
@@ -321,6 +321,7 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
         # Multi-threading
         # Ok, this isn't going to be very fun. Since deep-svr requires files and external utilities, we need to split the input
         # bed file of variant coordinates into smaller bed files and run those separately
+        # We also need to set a unique output path
 
         # First, lets split the BED file of variants
         # Open files
@@ -351,11 +352,13 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
         for i in range(0, cores):
             job_prefix = prefix + ".j" + str(i)
             job_bed_path = path_prefix +".j" + str(i) + ".bed"
+            job_tmp_dir = tmpdir + ".j" + str(i)
+            os.mkdir(job_tmp_dir)
             multiproc_args.append([job_prefix,
                                    bam,
                                    job_bed_path,
                                    ref,
-                                   tmpdir])
+                                   job_tmp_dir])
         logging.info("Running using %s threads" % cores)
 
         proc_pool = multiprocessing.Pool(processes=cores)
@@ -395,7 +398,7 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
         df.to_csv(feature_file, sep="\t")
     # Generate figures (if specified)
     if generate_plots:
-        logger.info('Generating Figures')
+        logger.info('Generating figures')
         figure_dir = os.path.join(outdir, "figures")
         if not os.path.exists(figure_dir):
             os.mkdir(figure_dir)
