@@ -391,6 +391,8 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
         var_are_repeats.append(is_repeat)
     df["repeat"] = var_are_repeats
 
+    df["passed"] = (df.repeat == False) & (df.preds == 1)
+
     # Write out the variant features (if the user specified)
     if output_features:
         logger.info('Saving DeepSVR features')
@@ -406,8 +408,7 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
         plot_features.generate_pca_plot(df, figure_dir, prefix)
 
     # Filter variants
-    df["passed"] = (df.repeat == False) & (df.preds == 1)
-    df = df["passed" == True]
+    df = df[df.passed]
 
     logger.info('Filtering VCF')
     if cores == 1:
