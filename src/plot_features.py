@@ -53,13 +53,13 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
     }
 
     # Since there can be a wide range of allele counts with extreme outliers, normalize
-    allele_alt_low = int(numpy.quantile(plot_data["tumor_var_count"], 0.05))
-    allele_alt_high = int(numpy.quantile(plot_data["tumor_var_count"], 0.95))
-    allele_depth_low = int(numpy.quantile(plot_data["tumor_depth"], 0.05))
-    allele_depth_high = int(numpy.quantile(plot_data["tumor_depth"], 0.95))
-    restrict = lambda x, min_n, max_n: min_n if x < min_n else max_n if x > max_n else x
-    plot_data["tumor_var_count"] = list(restrict(x, allele_alt_low, allele_alt_high) for x in plot_data.tumor_var_count)
-    plot_data["tumor_depth"] = list(restrict(x, allele_depth_low, allele_depth_high) for x in plot_data.tumor_depth)
+    allele_alt_high = int(numpy.quantile(plot_data["tumor_var_count"], 0.99))
+    allele_depth_high = int(numpy.quantile(plot_data["tumor_depth"], 0.99))
+    allele_alt_high = 60 if 60 > allele_alt_high else allele_alt_high
+    allele_depth_high = 60 if 60 > allele_depth_high else allele_depth_high
+    restrict = lambda x, max_n: max_n if x > max_n else x
+    plot_data["tumor_var_count"] = list(restrict(x, allele_alt_high) for x in plot_data.tumor_var_count)
+    plot_data["tumor_depth"] = list(restrict(x, allele_depth_high) for x in plot_data.tumor_depth)
 
     extra_params = {
         "base_qual": {"xlim": [0, 40], "ylim": [0, 40]},
@@ -67,9 +67,7 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
         "se_mapping_qual": {"xlim": [0, 60], "ylim": [0, 60]}
     }
 
-    # For convinience and plot clarity
-    plot_data["passed"] = list(x == 1 for x in plot_data["preds"])
-
+    # Generate plots
     for g_name, group in plot_groups.items():
 
         plot_grid = sns.PairGrid(plot_data, vars=group, hue="passed", palette=["red", "dodgerblue"])
@@ -135,7 +133,7 @@ def generate_pca_plot(plot_data:pd.DataFrame, outdir:str, sample_name:str = None
     pca = PCA(n_components=2)
     two_comp_features = pca.fit_transform(plot_indep_features)
     two_comp_features = pd.DataFrame(two_comp_features, columns = ["PC1", "PC2"])
-    two_comp_features["passed"] = list(x == 1 for x in plot_data["preds"])
+    two_comp_features["passed"] = plot_data.passed
 
     two_comp_plot = sns.jointplot(data=two_comp_features, x="PC1", y="PC2", hue="passed", palette=["red", "dodgerblue"], joint_kws={"s":3})
     two_comp_plot.fig.suptitle(sample_name)
@@ -159,6 +157,7 @@ def main(args=None):
     generate_plots(plot_data, args.outdir)
 
     generate_pca_plot(plot_data, args.outdir)
+
 
 if __name__ == "__main__":
     main()
