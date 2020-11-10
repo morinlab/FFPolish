@@ -55,8 +55,8 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
     # Since there can be a wide range of allele counts with extreme outliers, normalize
     allele_alt_high = int(numpy.quantile(plot_data["tumor_var_count"], 0.99))
     allele_depth_high = int(numpy.quantile(plot_data["tumor_depth"], 0.99))
-    allele_alt_high = 60 if 60 > allele_alt_high else allele_alt_high
-    allele_depth_high = 60 if 60 > allele_depth_high else allele_depth_high
+    allele_alt_high = 80 if 80 > allele_alt_high else allele_alt_high
+    allele_depth_high = 80 if 80 > allele_depth_high else allele_depth_high
     restrict = lambda x, max_n: max_n if x > max_n else x
     plot_data["tumor_var_count"] = list(restrict(x, allele_alt_high) for x in plot_data.tumor_var_count)
     plot_data["tumor_depth"] = list(restrict(x, allele_depth_high) for x in plot_data.tumor_depth)
@@ -72,7 +72,7 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
 
         plot_grid = sns.PairGrid(plot_data, vars=group, hue="passed", palette=["red", "dodgerblue"])
         plot_grid.map_offdiag(sns.scatterplot, s=3)
-        plot_grid.map_diag(sns.kdeplot)
+        plot_grid.map_diag(sns.kdeplot if group == "allele_counts" else sns.histplot)  # Workaround until the KDE function is fixed
         plot_grid.add_legend()
         plot_grid.fig.suptitle(sample_name)
 

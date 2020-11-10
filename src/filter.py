@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import tempfile
 import pandas as pd 
 import numpy as np
 import logging
@@ -28,12 +29,9 @@ def check_commands():
     :return: None
     """
 
-    vcf2bed_rc = subprocess.call(["vcf2bed"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     bam_readcount_rc = subprocess.call(["bam-readcount"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # If the exit code is 127 for either process, it means the accompanying process could not be found
-    if vcf2bed_rc == 127:
-        raise FileNotFoundError("Unable to locate \'vcf2bed\', Ensure the \'bedops\' package is installed")
-    elif bam_readcount_rc == 127:
+    if bam_readcount_rc == 127:
         raise FileNotFoundError("Unable to locate \'bam-readcounts\'")
 
 
@@ -43,7 +41,7 @@ def get_deepsvr_attr(prefix, bam, bed_file_path, ref, tmpdir):
     return prep_data.training_data
 
 
-def vcf_to_bed(vcf_path:str, bed_path:str):
+def vcf_to_bed(vcf_path: str, bed_path: str):
     """
     Quickly coverts a VCF file (1-based) to a simple BED file with alleles included
     The following columns are output:
@@ -165,7 +163,7 @@ def vcf_to_bed(vcf_path:str, bed_path:str):
     return var_keys
 
 
-def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_threshold:int = 4):
+def check_for_repeat(var_key: str, ref_genome: pyfaidx.Fasta, indel_repeat_threshold: int = 4):
 
     # Break up this indel key into its individual components
     try:
@@ -186,7 +184,8 @@ def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_thresho
         indel_seq = alt
         if ref == "-":
             is_snv = False
-        is_snv = True
+        else:
+            is_snv = True
 
     # Check to  see if this even is an extension/contraction of an existing repeat
     # First, lets try to reduce this indel down to a unique core sequence
@@ -249,7 +248,7 @@ def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_thresho
         return False
 
 
-def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_features, generate_plots, seed, loglevel):
+def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_features, generate_plots, seed, loglevel, cleanup_tmp):
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s (%(relativeCreated)d ms) -> %(levelname)s: %(message)s',
                         datefmt='%I:%M:%S %p')
@@ -301,10 +300,15 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
         clf = joblib.load(os.path.join(BASE, 'models', 'trained.clf'))
         scaler = joblib.load(os.path.join(BASE, 'models', 'trained.scaler'))
 
+    # Create directories
     tmpdir = outdir + os.sep + "tmp_bam_readcounts"
+    tmpdir_obj = None
     if not os.path.exists(outdir):
         os.mkdir(outdir)
-    if not os.path.exists(tmpdir):
+    if cleanup_tmp:
+        tmpdir_obj = tempfile.TemporaryDirectory()
+        tmpdir = tmpdir_obj.name
+    elif not os.path.exists(tmpdir):
         os.mkdir(tmpdir)
 
     logger.info('Converting VCF to BED file')
@@ -341,26 +345,32 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
 
         # SANITY CHECK: If we have less lines than jobs, remove the empty job files and adjust jobs accordinging
         if i < cores:
-            for j in range (i, jobs):
-                os.remove(path_prefix +".j" + str(j) + ".bed")
+            for j in range(i, jobs):
+                os.remove(path_prefix + ".j" + str(j) + ".bed")
                 cores = i
 
-
-        # Now lets run the variant stats
+        # Now lets actually obtain variant stats
         # Prepare arguments. The only arguments that will change are the bed file and prefix
         multiproc_args = []
+        tmp_dirs_mp = []
         for i in range(0, cores):
             job_prefix = prefix + ".j" + str(i)
             job_bed_path = path_prefix +".j" + str(i) + ".bed"
             job_tmp_dir = tmpdir + ".j" + str(i)
-            os.mkdir(job_tmp_dir)
+            # Make job directory
+            if cleanup_tmp:
+                job_tmp_dir = tempfile.TemporaryDirectory()
+                tmp_dirs_mp.append(job_tmp_dir)
+            elif not os.path.exists(job_tmp_dir):
+                os.mkdir(job_tmp_dir)
+
             multiproc_args.append([job_prefix,
                                    bam,
                                    job_bed_path,
                                    ref,
-                                   job_tmp_dir])
-        logging.info("Running using %s threads" % cores)
+                                   job_tmp_dir.name])
 
+        logging.info("Running using %s threads" % cores)
         proc_pool = multiprocessing.Pool(processes=cores)
 
         # Moment of truth. Run the jobs
@@ -368,6 +378,10 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
 
         # Merge the output. They *should* be in the same order as the jobs that were run
         df = pd.concat(var_attr_multi)
+
+        # Cleanup tmp directories (if specified)
+        for x in tmp_dirs_mp:
+            x.cleanup()
 
     logger.info('Hard-filter variants')
     df = df[df.tumor_VAF > 0.05]
@@ -434,3 +448,7 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
                         f_out.write(line)
                 else:
                     f_out.write(line)
+
+    # Cleanup temp directory
+    if cleanup_tmp and tmpdir_obj is not None:
+        tmpdir_obj.cleanup()

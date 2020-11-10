@@ -31,6 +31,7 @@ if __name__ == '__main__':
     predict_parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
     predict_parser.add_argument("-f", "--features", action="store_true", help="Generate an additional TSV file summarizing characteristics for each variant")
     predict_parser.add_argument("--plot_features", action="store_true", help="Generate figures summarizing variant characteristics")
+    predict_parser.add_argument("--cleanup", action="store_true", help="Remove temporary files generated running bam-readcounts")
 
     training_parser = predict_parser.add_argument_group("Model re-training")
     training_parser.add_argument('-rt', '--retrain', metavar='HDF5', default=None,
@@ -61,7 +62,7 @@ if __name__ == '__main__':
 
     if args.subcommand == 'filter':
         filter(args.ref, args.vcf, args.bam, args.outdir, args.prefix, args.retrain, args.grid_search, 
-                args.cores, args.features, args.plot_features, args.seed, args.loglevel)
+                args.cores, args.features, args.plot_features, args.seed, args.loglevel, args.cleanup)
 
     elif args.subcommand == 'extract':
         extract(args.ref, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount,
