@@ -212,7 +212,7 @@ def check_for_repeat(var_key:str, ref_genome:pyfaidx.Fasta, indel_repeat_thresho
             # Is this string a repetative substring of the full indel sequence?
             if substring_match:
                 unique_seq = test_seq
-                logging.debug("%s: Reduced indel sequence to %s" % (mutation, unique_seq))
+                logging.debug("%s: Reduced indel sequence to %s" % (var_key, unique_seq))
                 break
 
     seq_length = len(unique_seq)
@@ -406,8 +406,8 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
         plot_features.generate_pca_plot(df, figure_dir, prefix)
 
     # Filter variants
-    df = df[df.preds == 1]
-    df = df[df.repeat == False]
+    df["passed"] = (df.repeat == False) & (df.preds == 1)
+    df = df["passed" == True]
 
     logger.info('Filtering VCF')
     if cores == 1:

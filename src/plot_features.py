@@ -3,6 +3,7 @@
 import os
 import argparse
 import numpy
+from matplotlib import pyplot
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import seaborn as sns
@@ -51,6 +52,15 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
                         'tumor_var_avg_distance_to_effective_3p_end',  'tumor_var_avg_distance_to_effective_5p_end']
     }
 
+    # Since there can be a wide range of allele counts with extreme outliers, normalize
+    allele_alt_low = int(numpy.quantile(plot_data["tumor_var_count"], 0.05))
+    allele_alt_high = int(numpy.quantile(plot_data["tumor_var_count"], 0.95))
+    allele_depth_low = int(numpy.quantile(plot_data["tumor_depth"], 0.05))
+    allele_depth_high = int(numpy.quantile(plot_data["tumor_depth"], 0.95))
+    restrict = lambda x, min_n, max_n: min_n if x < min_n else max_n if x > max_n else x
+    plot_data["tumor_var_count"] = list(restrict(x, allele_alt_low, allele_alt_high) for x in plot_data.tumor_var_count)
+    plot_data["tumor_depth"] = list(restrict(x, allele_depth_low, allele_depth_high) for x in plot_data.tumor_depth)
+
     extra_params = {
         "base_qual": {"xlim": [0, 40], "ylim": [0, 40]},
         "mapping_qual": {"xlim": [0, 60], "ylim": [0, 60]},
@@ -63,7 +73,7 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
     for g_name, group in plot_groups.items():
 
         plot_grid = sns.PairGrid(plot_data, vars=group, hue="passed", palette=["red", "dodgerblue"])
-        plot_grid.map_offdiag(sns.scatterplot)
+        plot_grid.map_offdiag(sns.scatterplot, s=3)
         plot_grid.map_diag(sns.kdeplot)
         plot_grid.add_legend()
         plot_grid.fig.suptitle(sample_name)
@@ -73,6 +83,8 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
 
         plot_out_name = outdir + os.sep + sample_name + "." + g_name + ".png"
         plot_grid.savefig(plot_out_name)
+
+    pyplot.close("all")
 
 
 def generate_pca_plot(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
@@ -125,7 +137,7 @@ def generate_pca_plot(plot_data:pd.DataFrame, outdir:str, sample_name:str = None
     two_comp_features = pd.DataFrame(two_comp_features, columns = ["PC1", "PC2"])
     two_comp_features["passed"] = list(x == 1 for x in plot_data["preds"])
 
-    two_comp_plot = sns.jointplot(data=two_comp_features, x="PC1", y="PC2", hue="passed", palette=["red", "dodgerblue"])
+    two_comp_plot = sns.jointplot(data=two_comp_features, x="PC1", y="PC2", hue="passed", palette=["red", "dodgerblue"], joint_kws={"s":3})
     two_comp_plot.fig.suptitle(sample_name)
 
     # Save these plots
@@ -134,6 +146,7 @@ def generate_pca_plot(plot_data:pd.DataFrame, outdir:str, sample_name:str = None
 
     two_comp_path = outdir + os.sep + sample_name + ".pca_two_components.png"
     two_comp_plot.savefig(two_comp_path)
+    pyplot.close("all")
 
 
 def main(args=None):
