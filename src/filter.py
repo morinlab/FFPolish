@@ -22,7 +22,6 @@ from sklearn.model_selection import GridSearchCV
 
 BASE = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-
 def check_commands():
     """
     Validate that all external utilities are present and accessible via $PATH
@@ -371,10 +370,11 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
                                    job_tmp_dir.name])
 
         logging.info("Running using %s threads" % cores)
-        proc_pool = multiprocessing.Pool(processes=cores)
 
-        # Moment of truth. Run the jobs
-        var_attr_multi = proc_pool.starmap(get_deepsvr_attr, multiproc_args)
+        # To prevent deadlocks due to some shared elements, spawn processes instead of forking them
+        with multiprocessing.get_context("spawn").Pool(processes=cores) as proc_pool:
+            # Moment of truth. Run the jobs
+            var_attr_multi = proc_pool.starmap(get_deepsvr_attr, multiproc_args)
 
         # Merge the output. They *should* be in the same order as the jobs that were run
         df = pd.concat(var_attr_multi)
