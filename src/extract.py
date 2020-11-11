@@ -11,6 +11,7 @@ import sys
 import deepsvr_utils as dp
 import vaex
 from tqdm import tqdm
+from utils import *
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -46,6 +47,10 @@ def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, loglevel):
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s (%(relativeCreated)d ms) -> %(levelname)s: %(message)s',
                         datefmt='%I:%M:%S %p')
+
+    # Check for required external commands
+    logging.info('Checking for tools in $PATH')
+    check_commands()
 
     if not prefix:
         prefix = os.path.basename(bam.split('.')[0])
