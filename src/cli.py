@@ -25,9 +25,9 @@ if __name__ == '__main__':
     predict_parser.add_argument('vcf', metavar='VCF', help='VCF to filter')
     predict_parser.add_argument('bam', metavar='BAM', help='Tumor BAM file')
     predict_parser.add_argument('-o', '--outdir', metavar='DIR', default=os.path.join(os.getcwd(), 'results'), 
-                        help='Output directory')
+                                help='Output directory')
     predict_parser.add_argument('-c', '--cores', metavar='INT', default=1, type=int,
-                        help='Number of cores to use for grid search and filtering (default: 1)')
+                                help='Number of cores to use for grid search and filtering (default: 1)')
     predict_parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
     predict_parser.add_argument("-f", "--features", action="store_true", help="Generate an additional TSV file summarizing characteristics for each variant")
     predict_parser.add_argument("--plot_features", action="store_true", help="Generate figures summarizing variant characteristics")
@@ -35,21 +35,24 @@ if __name__ == '__main__':
 
     training_parser = predict_parser.add_argument_group("Model re-training")
     training_parser.add_argument('-rt', '--retrain', metavar='HDF5', default=None,
-                        help='Retrain model with new data (in hdf5 format)')
+                                 help='Retrain model with new data (in hdf5 format)')
     training_parser.add_argument('-gs', '--grid_search', action='store_true', default=False,
-                        help='Perform grid search when retraining model')
+                                 help='Perform grid search when retraining model')
     training_parser.add_argument('-s', '--seed', metavar='INT', default=667,
-                        help='Seed for retraining (default: 667)')
+                                 help='Seed for retraining (default: 667)')
 
     extract_parser = subparsers.add_parser('extract', help='Extract features for re-training')
     extract_parser.add_argument('ref', metavar='REFERENCE', help='Reference genome FASTA')
-    extract_parser.add_argument('gt', metavar='BED/PICKLE', help='BED or pickle of true variants')
+    extract_parser.add_argument('gt', metavar='VCF/PICKLE', help='VCF or pickle of true variants')
     extract_parser.add_argument('vcf', metavar='VCF', help='VCF to create training data for')
     extract_parser.add_argument('bam', metavar='BAM', help='Tumor BAM file')
     extract_parser.add_argument('outdir', metavar='DIR', help='Output directory')
     extract_parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
     extract_parser.add_argument('--skip_bam_readcount', action='store_true', default=False,
-                        help='Skip bam_readcount on sample')
+                                help='Skip bam_readcount on sample')
+    extract_parser.add_argument('-c', '--cores', metavar='INT', default=1, type=int,
+                                help='Number of cores to use for grid search and filtering (default: 1)')
+    extract_parser.add_argument("--cleanup", action="store_true", help="Remove temporary files generated running bam-readcounts")
 
     plot_parser = subparsers.add_parser("plot", help="Visualize DeepSVR features")
     plot_parser.add_argument("input", metavar="TSV", help="Input TSV file listing DeepSVR features. Generated using \'filter -f \'")
@@ -62,7 +65,8 @@ if __name__ == '__main__':
                 args.cores, args.features, args.plot_features, args.seed, args.loglevel, args.cleanup)
 
     elif args.subcommand == 'extract':
-        extract(args.ref, args.gt, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount)
+        extract(args.ref, args.gt, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount,
+                args.cores, args.cleanup, args.loglevel)
 
     elif args.subcommand == 'plot':
         plot_features.main(args)

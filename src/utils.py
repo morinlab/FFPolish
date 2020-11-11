@@ -16,6 +16,26 @@ import subprocess
 import multiprocessing
 import plot_features
 
+"""
+Progress bar
+"""
+def progress(count, total, status=''):
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+
+    percents = round(100.1 * count / float(total), 1)
+    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+
+    sys.stdout.write('[%s] %s%s %s\r' % (bar, percents, '%', status))
+    sys.stdout.flush()
+
+def convert_one_based(row):
+    """
+    Converts 0-based coordinates to 1-based
+    """
+    row['start'] += 1
+    return row
+
 def check_commands():
     """
     Validate that all external utilities are present and accessible via $PATH
