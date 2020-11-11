@@ -128,9 +128,14 @@ def vcf_to_bed(vcf_path: str, bed_path: str):
                     alt = "-"
 
                     # Set start and end coordinates
-                    pos += l_alt
+                    start = pos - 1 + l_alt
+                    end = start + len(ref) - 1
+
+                elif alt in miss_base:  # Deletion which has already been adjusted
                     start = pos - 1
                     end = start + len(ref) - 1
+                    ref = o_ref
+                    alt = "-"
 
                 elif alt.startswith(o_ref):  # Insertion with allele duplicated
                     l_ref = len(o_ref)
@@ -139,10 +144,17 @@ def vcf_to_bed(vcf_path: str, bed_path: str):
 
                     start = pos + l_ref - 1
                     end = start + 1
+
+                elif o_ref in miss_base:  # Insertion which has already been adjusted
+                    start = pos - 1
+                    end = start + 1
+                    ref = o_ref
                 else:  # SNVs or 1bp insertions/deletions
+                    if len(o_ref) > 1 or len(alt) > 1:
+                        raise AttributeError("Unable to process line %s of the input VCF file. Malformed VCF entry or DNP" % i)
                     start = pos - 1
                     end = pos
-                    ref = o_ref
+                    ref = "-"
 
                 # Sanity check
                 if start < 0:
