@@ -152,5 +152,5 @@ def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, cores, cleanu
     vaex_df.export(os.path.join(outdir, 'train.hdf5'))  
 
     # Cleanup temp directory
-    if cleanup_tmp and tmpdir_obj is not None:
+    if cleanup and tmpdir_obj is not None:
         tmpdir_obj.cleanup()
