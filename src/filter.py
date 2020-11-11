@@ -202,9 +202,9 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
 
     logger.info('Filtering VCF')
     if cores == 1:
-        kept_vars = list(df.index.str.replace(prefix + '~', ''))
+        kept_vars = set(df.index.str.replace(prefix + '~', ''))
     else:
-        kept_vars = list(df.index.str.replace(prefix + '.j[0-9]*~', ''))
+        kept_vars = set(df.index.str.replace(prefix + '.j[0-9]*~', ''))
 
     # Is the input VCF gzipped?
     with open(vcf, "rb") as test_f:
@@ -219,9 +219,12 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
             for line in f_in:
                 if not line.startswith('#'):
                     split = line.split('\t')
-                    var = '{}:{}-{}{}>{}'.format(split[0], split[1], split[1], split[3], split[4])
-                    if var_keys[var] in kept_vars:
-                        f_out.write(line)
+                    # Handle multiallelic variants
+                    alt_alleles = split[4].split(",")
+                    for alt in alt_alleles:
+                        var = '{}:{}-{}{}>{}'.format(split[0], split[1], split[1], split[3], alt)
+                        if var_keys[var] in kept_vars:
+                            f_out.write(line)
                 else:
                     f_out.write(line)
 

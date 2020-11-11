@@ -36,6 +36,7 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
     # Parse sample name
     if sample_name is None:
         sample_name = plot_data["Unnamed: 0"][0].split("~")[0]  # This is ugly, but its not my fault
+        sample_name = sample_name.replace(".j0", "")
 
     # Pair associated features (usually ref and alt) for multiplots
     plot_groups = {
@@ -72,7 +73,11 @@ def generate_plots(plot_data:pd.DataFrame, outdir:str, sample_name:str = None):
 
         plot_grid = sns.PairGrid(plot_data, vars=group, hue="passed", palette=["red", "dodgerblue"])
         plot_grid.map_offdiag(sns.scatterplot, s=3)
-        plot_grid.map_diag(sns.kdeplot if group == "allele_counts" else sns.histplot)  # Workaround until the KDE function is fixed
+        # Workaround until the KDE function is fixed
+        if g_name == "allele_counts":
+            plot_grid.map_diag(sns.histplot, bins=20)
+        else:
+            plot_grid.map_diag(sns.kdeplot)
         plot_grid.add_legend()
         plot_grid.fig.suptitle(sample_name)
 
@@ -102,6 +107,7 @@ def generate_pca_plot(plot_data:pd.DataFrame, outdir:str, sample_name:str = None
     # Parse sample name
     if sample_name is None:
         sample_name = plot_data["Unnamed: 0"][0].split("~")[0]  # This is ugly, but its still not my fault
+        sample_name = sample_name.replace(".j0", "")
 
     # Features to be scaled
     indep_var = ['tumor_ref_count', 'tumor_ref_avg_mapping_quality', 'tumor_ref_avg_basequality', 'tumor_ref_avg_se_mapping_quality',
