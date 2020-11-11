@@ -59,6 +59,10 @@ def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, cores, cleanu
         true_vars = true_vars.progress_apply(convert_one_based, axis=1)
         true_vars.to_pickle(os.path.join(outdir, 'true_vars.pkl'))
 
+    logger.info('Converting VCF to BED file')
+    bed_file_path = os.path.join(tmpdir, prefix) + '.bed'
+    var_keys = vcf_to_bed(vcf, bed_file_path)
+
     logger.info('Preparing data')
     if cores <= 1:
         # Single-threaded
@@ -146,3 +150,7 @@ def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, cores, cleanu
 
     vaex_df = vaex.from_pandas(df)
     vaex_df.export(os.path.join(outdir, 'train.hdf5'))  
+
+    # Cleanup temp directory
+    if cleanup_tmp and tmpdir_obj is not None:
+        tmpdir_obj.cleanup()
