@@ -42,7 +42,7 @@ def convert_one_based(row):
     row['start'] += 1
     return row
 
-def extract(ref, vcf, bam, outdir, prefix, skip_bam_readcount, labels, pkl, loglevel):
+def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, loglevel):
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s (%(relativeCreated)d ms) -> %(levelname)s: %(message)s',
                         datefmt='%I:%M:%S %p')
@@ -50,8 +50,14 @@ def extract(ref, vcf, bam, outdir, prefix, skip_bam_readcount, labels, pkl, logl
     if not prefix:
         prefix = os.path.basename(bam.split('.')[0])
 
-    # Generate matrix of true variants
-    if labels or not os.path.exists(os.path.join(outdir, 'true_vars.pkl')):
+    logger.info('Preparing data')
+    prep_data = dp.PrepareData(prefix, bam, bed_file_path, ref, outdir)
+    
+    df = prep_data.training_data
+
+    try:
+        true_vars = pd.read_pickle(os.path.join(DATA, 'train_data', 'true_vars.pkl'))
+    except:
         logger.info('Converting ground truth variants to 1-based coordinates')
         true_vars = pd.read_csv(label,
                                 sep='\t', index_col=None, header=None, dtype={0: str})
@@ -59,12 +65,6 @@ def extract(ref, vcf, bam, outdir, prefix, skip_bam_readcount, labels, pkl, logl
         true_vars = true_vars.progress_apply(convert_one_based, axis=1)
         true_vars.to_pickle(os.path.join(outdir, 'true_vars.pkl'))
 
-    logger.info('Preparing data')
-    prep_data = dp.PrepareData(prefix, bam, bed_file_path, ref, outdir)
-    
-    df = prep_data.training_data
-
-    true_vars = pd.read_pickle(os.path.join(DATA, 'train_data', 'true_vars.pkl'))
     df['real'] = 0
 
     sample = df.index[0].split('~')[0]

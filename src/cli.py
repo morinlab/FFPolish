@@ -43,16 +43,13 @@ if __name__ == '__main__':
 
     extract_parser = subparsers.add_parser('extract', help='Extract features for re-training')
     extract_parser.add_argument('ref', metavar='REFERENCE', help='Reference genome FASTA')
-    extract_parser.add_argument('vcf', metavar='VCF', help='VCF to filter')
+    extract_parser.add_argument('gt', metavar='BED/PICKLE', help='BED or pickle of true variants')
+    extract_parser.add_argument('vcf', metavar='VCF', help='VCF to create training data for')
     extract_parser.add_argument('bam', metavar='BAM', help='Tumor BAM file')
     extract_parser.add_argument('outdir', metavar='DIR', help='Output directory')
     extract_parser.add_argument('-p', '--prefix', default=None, help='Output prefix (default: basename of BAM)')
     extract_parser.add_argument('--skip_bam_readcount', action='store_true', default=False,
                         help='Skip bam_readcount on sample')
-    extract_parser.add_argument('--labels', metavar='BED', default=None,
-                        help='BED file of true variants (to create pickle file of true variants)')
-    extract_parser.add_argument('--pkl', metavar='PKL', default=None, 
-                        help='Pickle file of true variants')
 
     plot_parser = subparsers.add_parser("plot", help="Visualize DeepSVR features")
     plot_parser.add_argument("input", metavar="TSV", help="Input TSV file listing DeepSVR features. Generated using \'filter -f \'")
@@ -65,8 +62,7 @@ if __name__ == '__main__':
                 args.cores, args.features, args.plot_features, args.seed, args.loglevel, args.cleanup)
 
     elif args.subcommand == 'extract':
-        extract(args.ref, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount,
-                args.labels, args.pkl)
+        extract(args.ref, args.gt, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount)
 
     elif args.subcommand == 'plot':
         plot_features.main(args)
