@@ -194,7 +194,7 @@ def check_for_repeat(var_key: str, ref_genome: pyfaidx.Fasta, indel_repeat_thres
 
     start_pos = int(start)
 
-    logging.debug("%s: Examining variant for repetitive reference sequence" % str)
+    logging.debug("%s: Examining variant for repetitive reference sequence" % var_key)
     if alt == "-":  # Deletion
         indel_seq = ref
         is_snv = False

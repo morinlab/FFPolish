@@ -10,6 +10,7 @@ import glob
 import sys
 import deepsvr_utils as dp
 import vaex
+import pyfaidx
 from tqdm import tqdm
 from utils import *
 
@@ -23,7 +24,7 @@ logger = logging.getLogger()
 
 tqdm.pandas(ascii = True)
 
-def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, cores, cleanup, loglevel):
+def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, cores, cleanup, loglevel, remove_repeats=False):
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s (%(relativeCreated)d ms) -> %(levelname)s: %(message)s',
                         datefmt='%I:%M:%S %p')
@@ -58,6 +59,8 @@ def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, cores, cleanu
         true_vars.columns = ['chr', 'start', 'end', 'ref', 'alt']
         true_vars = true_vars.progress_apply(convert_one_based, axis=1)
         true_vars.to_pickle(os.path.join(outdir, 'true_vars.pkl'))
+
+    # Filter and remove
 
     logger.info('Converting VCF to BED file')
     bed_file_path = os.path.join(tmpdir, prefix) + '.bed'
@@ -136,6 +139,18 @@ def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, cores, cleanu
     df = df[df.tumor_VAF > 0.05]
     df = df[df.tumor_depth > 10]
     df = df[df.tumor_var_num_minus_strand + df.tumor_var_num_plus_strand > 4]
+
+    # Check for repetative sequences
+    if remove_repeats:
+        ref_fasta = pyfaidx.Fasta(ref)
+        var_are_repeats = []
+        for var in list(df.index):
+
+            is_repeat = check_for_repeat(var, ref_fasta)
+            var_are_repeats.append(is_repeat)
+
+        var_not_repeats = list(x is False for x in var_are_repeats)
+        df = df[var_not_repeats]
 
     df['real'] = 0
 

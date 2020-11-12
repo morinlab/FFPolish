@@ -177,8 +177,10 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
     ref_fasta = pyfaidx.Fasta(ref)
     var_are_repeats = []
     for var in list(df.index):
+
         is_repeat = check_for_repeat(var, ref_fasta)
         var_are_repeats.append(is_repeat)
+
     df["repeat"] = var_are_repeats
 
     df["passed"] = (df.repeat == False) & (df.preds == 1)
@@ -226,6 +228,7 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
                         if var_keys[var] in kept_vars:
                             f_out.write(line)
                 else:
+                    # Write VCF header lines
                     f_out.write(line)
 
     # Cleanup temp directory

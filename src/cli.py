@@ -52,6 +52,8 @@ if __name__ == '__main__':
                                 help='Skip bam_readcount on sample')
     extract_parser.add_argument('-c', '--cores', metavar='INT', default=1, type=int,
                                 help='Number of cores to use for grid search and filtering (default: 1)')
+    extract_parser.add_argument("--remove_repeats", action="store_true",
+                                help="Remove SNVs and indels which are expansions/contractions of repetitive sequences")
     extract_parser.add_argument("--cleanup", action="store_true", help="Remove temporary files generated running bam-readcounts")
 
     plot_parser = subparsers.add_parser("plot", help="Visualize DeepSVR features")
@@ -66,7 +68,7 @@ if __name__ == '__main__':
 
     elif args.subcommand == 'extract':
         extract(args.ref, args.gt, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount,
-                args.cores, args.cleanup, args.loglevel)
+                args.cores, args.cleanup, args.loglevel, args.remove_repeats)
 
     elif args.subcommand == 'plot':
         plot_features.main(args)
