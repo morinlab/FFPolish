@@ -85,7 +85,7 @@ if __name__ == '__main__':
         extract(args.ref, args.gt, args.vcf, args.bam, args.outdir, args.prefix, args.skip_bam_readcount,
                 args.cores, args.cleanup, args.loglevel)
     elif args.subcommand == 'train':
-        train(args.model, args.datasets, args.cores, args.outdir, args.grid_search, args.folds, args.seed, 
+        train(args.model, args.datasets, args.outdir, args.cores, args.grid_search, args.folds, args.seed, 
               args.loglevel)
 
     elif args.subcommand == 'plot':
