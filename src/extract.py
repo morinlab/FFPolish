@@ -154,8 +154,8 @@ def extract(ref, gt, vcf, bam, outdir, prefix, skip_bam_readcount, cores, cleanu
 
     df['real'] = 0
 
-    sample = df.index[0].split('~')[0]
-    true_vars_set = set(df.index.str.replace(sample + '~', ''))
+    sample = df.index[0].split('~')[0].split('.')[0]
+    true_vars_set = set(df.index.str.replace(sample + '\.?j?[0-9]*~', ''))
 
     for index,row in true_vars.iterrows():
         progress(index, true_vars.shape[0])
