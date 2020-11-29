@@ -141,7 +141,14 @@ def generate_pca_plot(plot_data:pd.DataFrame, outdir:str, sample_name:str = None
     two_comp_features = pd.DataFrame(two_comp_features, columns = ["PC1", "PC2"])
     two_comp_features["passed"] = plot_data.passed
 
-    two_comp_plot = sns.jointplot(data=two_comp_features, x="PC1", y="PC2", hue="passed", palette=["red", "dodgerblue"], joint_kws={"s":3})
+    # For plotting purposes, subset the plot so that there are a max of 2x the false features as true features
+    passed_feat = two_comp_features[two_comp_features.passed == True]
+    failed_feat = two_comp_features[two_comp_features.passed == False]
+    false_sample = max(len(passed_feat) * 2, len(failed_feat)) 
+    
+    subset_feat = pd.concat([passed_feat, failed_feat.sample(false_sample, replace=False)])
+
+    two_comp_plot = sns.jointplot(data=subset_feat, x="PC1", y="PC2", hue="passed", palette=["red", "dodgerblue"], joint_kws={"s":3})
     two_comp_plot.fig.suptitle(sample_name)
 
     # Save these plots

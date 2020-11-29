@@ -129,7 +129,7 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, output_fe
         multiproc_args = []
         tmp_dirs_mp = []
         for i in range(0, cores):
-            job_prefix = prefix + ".j" + str(i)
+            job_prefix = prefix
             job_bed_path = path_prefix +".j" + str(i) + ".bed"
             job_tmp_dir = tmpdir + ".j" + str(i)
             # Make job directory
