@@ -67,7 +67,7 @@ def train(model, datasets, outdir, cores, grid_search, folds, seed, loglevel):
     train_df = vaex.open_many(datasets)
 
     lr_l1 = LogisticRegression(penalty='l1', random_state=seed, solver='saga', max_iter=10000)
-    lr_l2 = LogisticRegression(penalty='l2', random_state=seed, solver='saga', max_iter=10000, class_weight='balanced')
+    lr_l2 = LogisticRegression(penalty='l2', random_state=seed, solver='saga', max_iter=100000, class_weight='balanced')
     eNet = LogisticRegression(penalty='elasticnet', random_state=seed, solver='saga', max_iter=10000, 
                               l1_ratio=0.5, class_weight='balanced')
     rf = RandomForestClassifier(random_state=seed)
@@ -89,14 +89,14 @@ def train(model, datasets, outdir, cores, grid_search, folds, seed, loglevel):
     train_df = train_df.to_pandas_df(train_features + ['real'])
     y = train_df['real']
     X = train_df.drop(['real'], axis=1)
-
+    
     scaler = MinMaxScaler()
     X = scaler.fit_transform(X)
     dump(scaler, os.path.join(outdir, '{0}_scaler.pkl'.format(model)))
 
     if grid_search:
         logging.info('Performing grid search: {0}'.format(model))
-        clf = GridSearchCV(models[model], params[model], n_jobs=cores, scoring=metrics, cv=10, 
+        clf = GridSearchCV(models[model], params[model], n_jobs=cores, scoring='f1', cv=10, 
                            return_train_score=True, verbose=2, refit=False)
         clf.fit(X, y)
 
