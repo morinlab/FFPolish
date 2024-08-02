@@ -9,12 +9,27 @@ import joblib
 import gzip
 import pdb
 import vaex
+import urllib.request
+from tqdm import tqdm
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import GridSearchCV
 
 BASE = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
+
+def download_url(url, output_path):
+    with DownloadProgressBar(unit='B', unit_scale=True,
+                             miniters=1, desc=url.split('/')[-1]) as t:
+        urllib.request.urlretrieve(url, filename=output_path, reporthook=t.update_to)
+
 
 def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, loglevel):
     logging.basicConfig(level=loglevel,
@@ -28,6 +43,11 @@ def filter(ref, vcf, bam, outdir, prefix, retrain, grid_search, cores, seed, log
         prefix = os.path.basename(os.path.join(outdir, bam.split('.')[0]))
     
     if retrain:
+        if not os.path.exists(os.path.join(BASE, 'orig_train.hdf5')):
+            logger.info('Downloading original training data')
+            download_url('https://www.bcgsc.ca/downloads/morinlab/FFPolish/training_data.hdf5', 
+                         os.path.join(BASE, 'orig_train.hdf5'))
+        
         orig_train_df = vaex.open(os.path.join(BASE, 'orig_train.hdf5'))
         train_features = orig_train_df.get_column_names(regex='tumor')
         new_train_df = vaex.open(retrain)
